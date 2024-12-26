@@ -2,6 +2,7 @@ package log
 
 import (
 	"io"
+	"log"
 	"os"
 
 	"github.com/tysonmote/gommap"
@@ -19,7 +20,7 @@ type index struct {
 	file *os.File
 	// Memory mapped file
 	mmap gommap.MMap
-	// size of the inded and where to write the next entry
+	// size of the index and where to write the next entry
 	size uint64
 }
 
@@ -51,18 +52,26 @@ func newIndex(f *os.File, c Config) (*index, error) {
 func (i *index) Close() error {
 	// Flushing the changes to the mmap to the actual file
 	if err := i.mmap.Sync(gommap.MS_SYNC); err != nil {
+		log.Println("------------Error in sync")
 		return err
 	}
-	// Flushing the file content to the disk
+	if err := i.mmap.UnsafeUnmap(); err != nil {
+		log.Println("------------Error in unmap")
+		return err
+	}	
+ 	// Flushing the file content to the disk
 	if err := i.file.Sync(); err != nil {
+		log.Println("------------Error in file sync")
 		return err
 	}
 	// Truncate the file to the amount that's actually in it
 	// Removing the empty space between the last entry and the end of the file is required otherwise service not restart properly
 	if err := i.file.Truncate(int64(i.size)); err != nil {
+		log.Printf("------------Error in truncate: %v", err)
 		return err
 	}
-	return nil
+	
+	return i.file.Close()
 }
 
 // Takes in and offset and returns the associalted position in the store file
@@ -85,7 +94,7 @@ func (i *index) Read(in int64) (out uint32, pos uint64, err error) {
 }
 
 func (i *index) Write(off uint32, pos uint64) error{
-	if uint64(len(i.mmap)) < i.size + entWidth {
+	if i.IsMaxed() {
 		return io.EOF
 	}
 	enc.PutUint32(i.mmap[i.size : i.size + offWidth], off)
@@ -98,6 +107,10 @@ func (i *index) Write(off uint32, pos uint64) error{
 // Get index's file path
 func (i *index) Name() string {
 	return i.file.Name()
+}
+
+func (i *index) IsMaxed() bool {
+	return uint64(len(i.mmap)) < i.size + entWidth
 }
 
 
