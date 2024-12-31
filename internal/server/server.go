@@ -15,8 +15,8 @@ var _ api.LogServer = (*grpcServer)(nil)
 
 // grpc server that listen for incoming connections
 // i.e. Register our server
-func NewGRPCServer(config *Config) (*grpc.Server, error) {
-	gsrv := grpc.NewServer()
+func NewGRPCServer(config *Config, opts ...grpc.ServerOption) (*grpc.Server, error) {
+	gsrv := grpc.NewServer(opts...)
 	srv, err := newgrpcServer(config)
 	if err != nil {
 		return nil, err
