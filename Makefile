@@ -1,4 +1,4 @@
-CONFIG_PATH := $(USERPROFILE)\proglog\
+CONFIG_PATH := $(USERPROFILE)\proglog
 
 .PHONY: init
 
@@ -21,9 +21,27 @@ gencert:
 		-ca-key=ca-key.pem \
 		-config=test/ca-config.json \
 		-profile=client \
- 		test/client-csr.json | cfssljson -bare client
+		-cn="root" \
+ 		test/client-csr.json | cfssljson -bare root-client
+	cfssl gencert \
+		-ca=ca.pem \
+		-ca-key=ca-key.pem \
+		-config=test/ca-config.json \
+		-profile=client \
+		-cn="nobody" \
+ 		test/client-csr.json | cfssljson -bare nobody-client
 	move *.pem ${CONFIG_PATH}
 	move *.csr ${CONFIG_PATH}
+
+$(CONFIG_PATH)\model.conf:
+	copy test\model.conf "$(CONFIG_PATH)\model.conf"
+
+$(CONFIG_PATH)\policy.csv:
+	copy test\policy.csv "$(CONFIG_PATH)\policy.csv"
+
+.PHONY: genacl
+genacl: $(CONFIG_PATH)\model.conf $(CONFIG_PATH)\policy.csv
+	echo "Access control lists configured."
 
 .PHONY: test
 test:
