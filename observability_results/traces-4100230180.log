@@ -1,0 +1,57 @@
+
+#----------------------------------------------
+
+TraceID:      953c7121cf649b956bcf528453f7343e
+SpanID:       b4fb0918a9cde2da
+
+Span:    log.v1.Log.Produce
+Status:   [0]
+Elapsed: 1ms
+SpanKind: Server
+
+Attributes:
+  - FailFast=false
+  - Client=false
+
+MessageEvents:
+Received
+UncompressedByteSize: 15
+CompressedByteSize: 20
+
+Sent
+UncompressedByteSize: 0
+CompressedByteSize: 5
+
+
+#----------------------------------------------
+
+TraceID:      6d264c6ff0e645e095da7914920db493
+SpanID:       f7044228601f46da
+
+Span:    log.v1.Log.Consume
+Status:   [0]
+Elapsed: 1ms
+SpanKind: Server
+
+Attributes:
+  - Client=false
+  - FailFast=false
+
+MessageEvents:
+Received
+UncompressedByteSize: 0
+CompressedByteSize: 5
+
+Sent
+UncompressedByteSize: 15
+CompressedByteSize: 20
+
+
+#----------------------------------------------
+
+TraceID:      75b44d1be5100fcef95214d5c0750365
+SpanID:       3a0e7a381771a9d9
+
+Span:    
+Status:   [0]
+Elapsed: 3ms
