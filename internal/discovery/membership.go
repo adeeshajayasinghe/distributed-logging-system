@@ -121,6 +121,7 @@ func (m *Membership) Members() []serf.Member {
 	return m.serf.Members()
 }
 
+// Server doesn’t receive discovery events anymore
 func (m *Membership) Leave() error {
 	return m.serf.Leave()
 }
