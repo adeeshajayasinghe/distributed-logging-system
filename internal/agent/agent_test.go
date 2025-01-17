@@ -17,6 +17,7 @@ import (
 	api "github.com/adeeshajayasinghe/distributed-logging-system/api/v1"
 	"github.com/adeeshajayasinghe/distributed-logging-system/internal/agent"
 	"github.com/adeeshajayasinghe/distributed-logging-system/internal/config"
+	"github.com/adeeshajayasinghe/distributed-logging-system/internal/loadbalance"
 )
 
 // This code sets up a three-node cluster. The second and third nodes join the first node’s cluster.
@@ -94,6 +95,9 @@ func TestAgent(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+
+	// Since we consumes only from followers, we need to wait until followers to replicate from the leader
+	time.Sleep(3 * time.Second)
 	consumeResponse, err := leaderClient.Consume(
 		context.Background(),
 		&api.ConsumeRequest{
@@ -103,8 +107,6 @@ func TestAgent(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, consumeResponse.Record.Value, []byte("foo"))
 
-	// wait until replication has finished
-	time.Sleep(3 * time.Second)
 	followerClient := client(t, agents[1], peerTLSConfig)
 	consumeResponse, err = followerClient.Consume(
 		context.Background(),
@@ -137,8 +139,10 @@ func client(
 		opts := []grpc.DialOption{grpc.WithTransportCredentials(tlsCreds)}
 		rpcAddr, err := agent.Config.RPCAddr()
 		require.NoError(t, err)
+		// Define the name of the custom schema in the URL so gRPC knows to use our resolver
 		conn, err := grpc.Dial(fmt.Sprintf(
-			"%s",
+			"%s:///%s",
+			loadbalance.Name,
 			rpcAddr,
 		), opts...)
 		require.NoError(t, err)
