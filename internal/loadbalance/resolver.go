@@ -47,7 +47,7 @@ func (r *Resolver) Build(
 	)
 	var err error
 	// Set the resolver connection to local server so the resolver cam call the GetServers() API
-	r.resolverConn, err = grpc.Dial(target.Endpoint, dialOpts...)
+	r.resolverConn, err = grpc.Dial(target.Endpoint(), dialOpts...)
 	if err != nil {
 		return nil, err
 	}
