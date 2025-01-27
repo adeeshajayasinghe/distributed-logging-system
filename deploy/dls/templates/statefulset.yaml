@@ -1,0 +1,90 @@
+# START: initial
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "dls.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "dls.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels: {{ include "dls.selectorLabels" . | nindent 6 }}
+  serviceName: {{ include "dls.fullname" . }}
+  replicas: {{ .Values.replicas }}
+  template:
+    metadata:
+      name: {{ include "dls.fullname" . }}
+      labels: {{ include "dls.labels" . | nindent 8 }}
+    spec:
+      # initContainers...
+      # END: initial
+      # START: initial_containers
+      initContainers:
+      - name: {{ include "dls.fullname" . }}-config-init
+        image: busybox
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |-
+          ID=$(echo $HOSTNAME | rev | cut -d- -f1 | rev)
+          cat > /var/run/dls/config.yaml <<EOD
+          data-dir: /var/run/dls/data
+          rpc-port: {{.Values.rpcPort}}
+          bind-addr: "$HOSTNAME.dls.{{.Release.Namespace}}.svc.cluster.local:{{.Values.serfPort}}"
+          bootstrap: $([ $ID = 0 ] && echo true || echo false)
+          $([ $ID != 0 ] && echo 'start-join-addrs: "dls-0.dls.{{.Release.Namespace}}.svc.cluster.local:{{.Values.serfPort}}"')
+          EOD
+        volumeMounts:
+        - name: datadir
+          mountPath: /var/run/dls
+        # START: initial
+      # END: initial_containers
+      # START: initial
+      # containers...
+      # END: initial
+      # START: containers
+      containers:
+      - name: {{ include "dls.fullname" . }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: {{ .Values.rpcPort }}
+          name: rpc
+        - containerPort: {{ .Values.serfPort }}
+          name: serf
+        args:
+          - --config-file=/var/run/dls/config.yaml
+        # END: initial
+        # probes...
+        # END: containers
+        # START: probes
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - |-
+              /bin/grpc_health_probe -addr=$HOSTNAME.dls.{{.Release.Namespace}}.svc.cluster.local:{{.Values.rpcPort}}
+          initialDelaySeconds: 10
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - |-
+              /bin/grpc_health_probe -addr=$HOSTNAME.dls.{{.Release.Namespace}}.svc.cluster.local:{{.Values.rpcPort}}
+          initialDelaySeconds: 10
+        # END: probes
+        # START: containers
+        volumeMounts:
+        - name: datadir
+          mountPath: /var/run/dls
+      # END: containers
+      # START: initial
+  volumeClaimTemplates:
+  - metadata:
+      name: datadir
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.storage }}
